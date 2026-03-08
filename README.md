@@ -207,6 +207,7 @@ Made with ♟️ and ☕ by **Night Wing** (Alias)
 Project Architect & Lead Developer
 
 Oslo — Discord Chess Trainer is a community tool designed for tactical chess training. As an aspiring Computer Science student, I specialize in AI-assisted development—utilizing modern tools to architect, debug, and deploy scalable applications while maintaining digital privacy.
+
 ---
 
 # 📜 License
