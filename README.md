@@ -200,15 +200,13 @@ The architecture is fully asynchronous, supporting multiple simultaneous puzzle 
 
 ---
 
-# 👨‍💻 Author
+# 👤 Author
 
-Made with ♟️ and ☕ by
+Made with ♟️ and ☕ by **Night Wing** (Alias)
 
-**Areeb Jamali**  
-Alias: **Night Wing**
+Project Architect & Lead Developer
 
-Creator of **Oslo — Discord Chess Trainer**
-
+Oslo — Discord Chess Trainer is a community tool designed for tactical chess training. As an aspiring Computer Science student, I specialize in AI-assisted development—utilizing modern tools to architect, debug, and deploy scalable applications while maintaining digital privacy.
 ---
 
 # 📜 License
