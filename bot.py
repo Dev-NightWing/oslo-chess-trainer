@@ -46,7 +46,6 @@ async def on_message(message):
 async def ping(ctx):
     await ctx.send("pong 🏓")
 
-#this offers solution for the hard ahh puzzles
 
 @bot.command()
 async def puzzle(ctx, level="medium"):
