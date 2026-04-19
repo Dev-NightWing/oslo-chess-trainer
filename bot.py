@@ -10,7 +10,32 @@ from reportlab.graphics import renderPM
 import json
 from puzzles import start_puzzle, get_random_puzzle, check_move, active_puzzles, load_stats
 import os
+import threading
+from flask import Flask, jsonify
 os.environ["PATH"] += os.pathsep + os.path.join(os.getcwd(), "cairo/bin")
+
+# --- Flask HTTP server for stats access ---
+flask_app = Flask(__name__)
+
+STATS_FILE = "/data/stats.json" if os.path.exists("/data") else "stats.json"
+
+@flask_app.route("/stats")
+def stats_endpoint():
+    try:
+        with open(STATS_FILE, "r") as f:
+            data = json.load(f)
+        return jsonify(data)
+    except FileNotFoundError:
+        return jsonify({}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def run_flask():
+    flask_app.run(host="0.0.0.0", port=3000)
+
+flask_thread = threading.Thread(target=run_flask, daemon=True)
+flask_thread.start()
+# ------------------------------------------
 
 
 TOKEN = os.getenv("DISCORD_TOKEN")
