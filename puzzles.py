@@ -40,7 +40,7 @@ async def init_db():
     _pool = await asyncpg.create_pool(
         DATABASE_URL,
         min_size=2,
-        max_size=10,
+        max_size=30,
         command_timeout=30,
     )
 
@@ -72,6 +72,12 @@ async def init_db():
                 user_id   TEXT NOT NULL,
                 guild_id  TEXT NOT NULL,
                 PRIMARY KEY (user_id, guild_id)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS server_settings (
+                guild_id           TEXT PRIMARY KEY,
+                locked_channel_id  TEXT DEFAULT NULL
             )
         """)
 
@@ -461,7 +467,7 @@ _puzzle_cache: dict = {}   # JSON fallback cache — loaded only if DB fails
 # Core chess themes exposed in bot commands
 SUPPORTED_THEMES = {
     "sacrifice", "endgame", "middlegame", "opening",
-    "fork", "pin", "mate", "mateIn1", "mateIn2", "promotion",
+    "fork", "pin", "mate", "mateIn1", "mateIn2", "mateIn4", "mateIn5", "promotion",
 }
 
 LEVELS = ["easy", "medium", "hard", "insane", "master"]
@@ -498,64 +504,57 @@ async def get_random_puzzle(level: str, theme: str = None) -> dict:
     Tries PostgreSQL first — instant query from 50k pool.
     Falls back to JSON files if DB is unavailable.
 
-    level: easy / medium / hard / insane / hardcore
+    level: easy / medium / hard / insane / master
     theme: optional — e.g. 'sacrifice', 'endgame'
     """
-    # hardcore maps to the insane DB pool filtered by rating >= 2400
-    db_level   = "insane" if level == "master" else level
-    rating_min = 2400     if level == "master" else 0
-
     if _pool is not None:
         try:
             async with _pool.acquire() as conn:
                 if theme:
                     count = await conn.fetchval("""
                         SELECT COUNT(*) FROM puzzles
-                        WHERE level = $1 AND themes LIKE $2 AND rating >= $3
-                    """, db_level, f"%{theme}%", rating_min)
+                        WHERE level = $1 AND themes LIKE $2
+                    """, level, f"%{theme}%")
                     if count and count > 0:
                         offset = random.randint(0, count - 1)
                         row = await conn.fetchrow("""
                             SELECT * FROM puzzles
-                            WHERE level = $1 AND themes LIKE $2 AND rating >= $3
-                            LIMIT 1 OFFSET $4
-                        """, db_level, f"%{theme}%", rating_min, offset)
+                            WHERE level = $1 AND themes LIKE $2
+                            LIMIT 1 OFFSET $3
+                        """, level, f"%{theme}%", offset)
                     else:
                         row = None
                     if row is None:
                         # Theme not found — fall back to any theme
                         count = await conn.fetchval(
-                            "SELECT COUNT(*) FROM puzzles WHERE level = $1 AND rating >= $2",
-                            db_level, rating_min
+                            "SELECT COUNT(*) FROM puzzles WHERE level = $1",
+                            level
                         )
                         offset = random.randint(0, max(0, count - 1))
                         row = await conn.fetchrow("""
                             SELECT * FROM puzzles
-                            WHERE level = $1 AND rating >= $2
-                            LIMIT 1 OFFSET $3
-                        """, db_level, rating_min, offset)
+                            WHERE level = $1
+                            LIMIT 1 OFFSET $2
+                        """, level, offset)
                 else:
                     count = await conn.fetchval(
-                        "SELECT COUNT(*) FROM puzzles WHERE level = $1 AND rating >= $2",
-                        db_level, rating_min
+                        "SELECT COUNT(*) FROM puzzles WHERE level = $1",
+                        level
                     )
                     offset = random.randint(0, max(0, count - 1))
                     row = await conn.fetchrow("""
                         SELECT * FROM puzzles
-                        WHERE level = $1 AND rating >= $2
-                        LIMIT 1 OFFSET $3
-                    """, db_level, rating_min, offset)
+                        WHERE level = $1
+                        LIMIT 1 OFFSET $2
+                    """, level, offset)
 
                 if row is not None:
                     return _row_to_puzzle(row)
         except Exception as e:
             print(f"[Oslo] DB puzzle query failed, using JSON fallback: {e}")
 
-    # JSON fallback — hardcore uses insane pool filtered by rating
-    fallback_level = "insane" if level == "master" else level
-    pool = _load_json_fallback(fallback_level)
-    if level == "master":
-        pool = [p for p in pool if p.get("rating", 0) >= 2400] or pool
+    # JSON fallback
+    pool = _load_json_fallback(level)
     if theme:
         t        = theme.lower()
         filtered = [p for p in pool if t in [x.lower() for x in p.get("themes", [])]]
@@ -571,3 +570,26 @@ def format_display_name(display_name: str, user_id: int) -> str:
     suffix = str(user_id)[-3:]
     clean  = display_name.strip().replace(" ", "")[:16]
     return f"{clean}_{suffix}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SERVER SETTINGS — CHANNEL LOCK
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def get_locked_channel(guild_id: str) -> str | None:
+    """Return the locked channel ID for a guild, or None if unlocked."""
+    async with _pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT locked_channel_id FROM server_settings WHERE guild_id = $1",
+            guild_id
+        )
+        return row["locked_channel_id"] if row else None
+
+
+async def set_locked_channel(guild_id: str, channel_id: str | None) -> None:
+    """Lock bot to a channel (channel_id) or unlock (None)."""
+    async with _pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO server_settings (guild_id, locked_channel_id)
+            VALUES ($1, $2)
+            ON CONFLICT (guild_id) DO UPDATE SET locked_channel_id = $2
+        """, guild_id, channel_id)

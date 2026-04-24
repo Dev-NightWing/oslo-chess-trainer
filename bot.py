@@ -15,6 +15,7 @@ from puzzles import (
     get_server_leaderboard, get_global_leaderboard,
     get_bot_stats, record_interaction, record_guild,
     import_legacy_to_guild, export_all_data, get_puzzle_source, format_display_name,
+    get_locked_channel, set_locked_channel,
     SUPPORTED_THEMES
 )
 
@@ -441,6 +442,57 @@ async def ping(ctx):
     await ctx.send("\U0001f3d3 Pong! `" + str(round(bot.latency * 1000)) + "ms`")
 
 
+# ── Channel lock guard ────────────────────────────────────────────────────────
+
+async def is_allowed_channel(ctx) -> bool:
+    """Return True if the command is allowed in this channel."""
+    if not ctx.guild:
+        return True  # DMs always allowed
+    locked = await get_locked_channel(str(ctx.guild.id))
+    if locked is None:
+        return True  # No lock set — all channels allowed
+    return str(ctx.channel.id) == locked
+
+
+@bot.command()
+@commands.has_permissions(manage_channels=True)
+async def lockbotchannel(ctx):
+    """Lock Oslo to the current channel only. Requires Manage Channels permission."""
+    if not ctx.guild:
+        await ctx.send("❌ This command can only be used in a server.")
+        return
+    await set_locked_channel(str(ctx.guild.id), str(ctx.channel.id))
+    await ctx.send(
+        f"🔒 Oslo is now locked to <#{ctx.channel.id}>.\n"
+        f"Puzzle commands will only work in this channel.\n"
+        f"Use `!unlockbotchannel` to allow Oslo everywhere again."
+    )
+
+
+@bot.command()
+@commands.has_permissions(manage_channels=True)
+async def unlockbotchannel(ctx):
+    """Unlock Oslo so it works in all channels."""
+    if not ctx.guild:
+        await ctx.send("❌ This command can only be used in a server.")
+        return
+    await set_locked_channel(str(ctx.guild.id), None)
+    await ctx.send("🔓 Oslo is now unlocked and works in all channels.")
+
+
+@bot.command()
+async def botlockstatus(ctx):
+    """Show which channel Oslo is locked to (if any)."""
+    if not ctx.guild:
+        await ctx.send("❌ This command can only be used in a server.")
+        return
+    locked = await get_locked_channel(str(ctx.guild.id))
+    if locked:
+        await ctx.send(f"🔒 Oslo is locked to <#{locked}>.")
+    else:
+        await ctx.send("🔓 Oslo is unlocked and works in all channels.")
+
+
 @bot.command()
 async def puzzle(ctx, arg1: str = "medium", arg2: str = None):
     """
@@ -452,6 +504,8 @@ async def puzzle(ctx, arg1: str = "medium", arg2: str = None):
       !puzzle easy mateIn1       -> easy, mateIn1 theme
     """
     await record_interaction()
+    if not await is_allowed_channel(ctx):
+        return
     user_id = ctx.author.id
 
     # Parse level and theme from args (can be in either order)
@@ -469,7 +523,7 @@ async def puzzle(ctx, arg1: str = "medium", arg2: str = None):
                 "Invalid argument: `" + arg + "`\n"
                 "Levels: `easy` `medium` `hard` `insane` `master`\n"
                 "Themes: `sacrifice` `endgame` `middlegame` `opening` "
-                "`fork` `pin` `mate` `mateIn1` `mateIn2` `promotion`"
+                "`fork` `pin` `mate` `mateIn1` `mateIn2` `mateIn4` `mateIn5` `promotion`"
             )
             return
 
@@ -525,6 +579,8 @@ async def puzzle(ctx, arg1: str = "medium", arg2: str = None):
 async def hint(ctx):
     """!hint  —  same as the hint button."""
     await record_interaction()
+    if not await is_allowed_channel(ctx):
+        return
     user_id = ctx.author.id
     h = get_hint(user_id)
     if h is None:
@@ -579,6 +635,8 @@ async def move_cmd(ctx, *, notation: str):
 async def resign(ctx):
     """!resign  —  give up and see the full solution."""
     await record_interaction()
+    if not await is_allowed_channel(ctx):
+        return
     user_id = ctx.author.id
     if user_id not in active_puzzles:
         await ctx.send("No active puzzle to resign.")
@@ -809,9 +867,10 @@ async def botstats(ctx):
 @bot.command()
 async def guide(ctx):
     await record_interaction()
+    if not await is_allowed_channel(ctx):
+        return
     embed = discord.Embed(
         title       = "♟️ Oslo Chess Trainer",
-        description = "Your interactive Discord puzzle trainer.",
         color       = discord.Color.from_rgb(200, 200, 200)
     )
     embed.add_field(
@@ -832,7 +891,7 @@ async def guide(ctx):
             "sacrifice   endgame    middlegame\n"
             "opening     fork       pin\n"
             "mate        mateIn1    mateIn2\n"
-            "promotion\n"
+            "mateIn4     mateIn5    promotion\n"
             "```"
         ),
         inline=False
@@ -859,6 +918,8 @@ async def guide(ctx):
 @bot.command()
 async def notation(ctx):
     await record_interaction()
+    if not await is_allowed_channel(ctx):
+        return
     embed = discord.Embed(
         title       = "\u265f\ufe0f Chess Notation Guide",
         description = "How to write moves for Oslo puzzles",
@@ -893,7 +954,7 @@ async def creator(ctx):
     await ctx.send(
         "\U0001f338 I am **Oslo**, your cozy Discord chess trainer.\n"
         "Created with \u265f\ufe0f and \u2615 by **Night Wing** for passionate chess players.\n"
-        "\U0001f43b Visit Oslo: https://oslo-web-production.up.railway.app"
+        "\u2615 Help keep Oslo running: https://ko-fi.com/devnightwing"
     )
 
 
@@ -942,7 +1003,8 @@ async def adminstatus(ctx):
         puzzle_val = (
             f"PostgreSQL ✅\n"
             f"easy {bd.get('easy',0):,} • medium {bd.get('medium',0):,}\n"
-            f"hard {bd.get('hard',0):,} • insane {bd.get('insane',0):,}"
+            f"hard {bd.get('hard',0):,} • insane {bd.get('insane',0):,} • master {bd.get('master',0):,}\n"
+            f"Fallback: 15,000/level (JSON)"
         )
     else:
         puzzle_val = "JSON fallback ⚠️"

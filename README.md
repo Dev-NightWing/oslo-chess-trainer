@@ -3,7 +3,7 @@
 
 Oslo is a Discord bot that transforms any server into an interactive chess puzzle training environment. Players launch puzzles, solve tactics through chat, and compete on leaderboards — all without leaving Discord.
 
-Visit Oslo's own webpage! :🐻[Oslo Web](https://oslo-web-production.up.railway.app)
+🐻 [Visit Oslo](https://oslo-web-production.up.railway.app)
 
 ---
 
@@ -16,8 +16,8 @@ v2.0 is a full architectural rebuild based on what real users actually needed:
 | | v1.0 | v2.0 |
 |---|---|---|
 | **Database** | JSON flat file | PostgreSQL (asyncpg) |
-| **Puzzle source** | Static JSON pools | 200,000 Lichess puzzles |
-| **Themes** | None | 10 tactical themes |
+| **Puzzle source** | Static JSON pools | 250,000 Lichess puzzles |
+| **Themes** | None | 12 tactical themes |
 | **Scoring** | Puzzle count only | Difficulty-weighted pts system |
 | **Leaderboards** | Server only | Server + Global, toggleable |
 | **Board rendering** | Basic SVG | Highlighted last move, correct perspective |
@@ -34,9 +34,9 @@ v2.0 is a full architectural rebuild based on what real users actually needed:
 ♟️ Launch instant chess puzzles directly inside Discord  
 🧠 Solve tactics through interactive back-and-forth gameplay  
 🖼️ Board renders after every move with last move highlighted  
-🎯 Filter by theme — sacrifice, endgame, fork, pin, and more  
+🎯 Filter by theme — 12 tactical themes including mateIn4, mateIn5, and more  
 📊 Difficulty tiers calibrated to real Lichess puzzle rating  
-📚 200,000 puzzles across 4 difficulty levels  
+📚 250,000 puzzles across 5 difficulty levels  
 🏆 Difficulty-weighted scoring with streaks and clean solve bonuses  
 📈 Separate server and global leaderboards with toggle buttons  
 👥 Multiple users solving simultaneously — fully async  
@@ -52,7 +52,7 @@ v2.0 is a full architectural rebuild based on what real users actually needed:
 | Easy       | 400 – 999    | 10 pts     |
 | Medium     | 1000 – 1499  | 20 pts     |
 | Hard       | 1500 – 1999  | 30 pts     |
-| Insane     | 2000 - 2300  | 50 pts     |
+| Insane     | 2000 – 2399  | 50 pts     |
 | Master     | 2400+        | 60-75 pts  |
 
 **Modifiers:**
@@ -71,7 +71,7 @@ Floor          → 0 (never negative)
 sacrifice   endgame    middlegame
 opening     fork       pin
 mate        mateIn1    mateIn2
-promotion
+mateIn4     mateIn5    promotion
 ```
 
 Usage: `!puzzle hard sacrifice` or `!puzzle endgame` or `!puzzle`
@@ -89,8 +89,8 @@ Custom data pipeline (`build_puzzle_pools.py`):
 • Streams the Lichess CSV directly into PostgreSQL — never loads full dataset into RAM  
 • Filters by difficulty rating bands matching the scoring tiers  
 • Pre-computes a display theme per puzzle using a priority order  
-• Inserts 50,000 puzzles per difficulty (200,000 total)  
-• Exports 2,000 per tier as JSON fallback files for offline resilience  
+• Inserts 50,000 puzzles per difficulty (250,000 total)  
+• Exports 15,000 per tier as JSON fallback files for offline resilience  
 
 ---
 

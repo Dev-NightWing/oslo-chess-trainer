@@ -34,14 +34,15 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 DB_POOL_SIZE = 50000
 
 # How many to save in JSON fallback files
-JSON_FALLBACK = 2000
+JSON_FALLBACK = 15000
 
 # Difficulty bands — must match scoring tiers in puzzles.py exactly
 DIFFICULTY_BANDS = {
     "easy":   (400,  999),
     "medium": (1000, 1499),
     "hard":   (1500, 1999),
-    "insane": (2000, 9999),
+    "insane": (2000, 2399),
+    "master": (2400, 9999),
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -109,7 +110,7 @@ async def build():
         print(f"Clearing {existing:,} existing puzzles...")
         await conn.execute("TRUNCATE TABLE puzzles")
 
-    print(f"DB ready. Target: {DB_POOL_SIZE:,} per level = {DB_POOL_SIZE*4:,} total")
+    print(f"DB ready. Target: {DB_POOL_SIZE:,} per level = {DB_POOL_SIZE*5:,} total")
     print("Reading CSV and streaming to DB...\n")
 
     # ── Track counts per level ────────────────────────────────────────────────
