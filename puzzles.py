@@ -467,7 +467,12 @@ _puzzle_cache: dict = {}   # JSON fallback cache — loaded only if DB fails
 # Core chess themes exposed in bot commands
 SUPPORTED_THEMES = {
     "sacrifice", "endgame", "middlegame", "opening",
-    "fork", "pin", "mate", "mateIn1", "mateIn2", "mateIn4", "mateIn5", "promotion",
+    "fork", "pin", "mate", "mateIn1", "mateIn2", "mateIn4", "longMate", "promotion",
+}
+
+# Map display names to actual Lichess DB theme strings
+THEME_ALIASES = {
+    "longMate": "mateIn5",
 }
 
 LEVELS = ["easy", "medium", "hard", "insane", "master"]
@@ -507,21 +512,24 @@ async def get_random_puzzle(level: str, theme: str = None) -> dict:
     level: easy / medium / hard / insane / master
     theme: optional — e.g. 'sacrifice', 'endgame'
     """
+    # Translate display theme names to actual Lichess DB theme strings
+    db_theme = THEME_ALIASES.get(theme, theme) if theme else None
+
     if _pool is not None:
         try:
             async with _pool.acquire() as conn:
-                if theme:
+                if db_theme:
                     count = await conn.fetchval("""
                         SELECT COUNT(*) FROM puzzles
                         WHERE level = $1 AND themes LIKE $2
-                    """, level, f"%{theme}%")
+                    """, level, f"%{db_theme}%")
                     if count and count > 0:
                         offset = random.randint(0, count - 1)
                         row = await conn.fetchrow("""
                             SELECT * FROM puzzles
                             WHERE level = $1 AND themes LIKE $2
                             LIMIT 1 OFFSET $3
-                        """, level, f"%{theme}%", offset)
+                        """, level, f"%{db_theme}%", offset)
                     else:
                         row = None
                     if row is None:
@@ -555,8 +563,8 @@ async def get_random_puzzle(level: str, theme: str = None) -> dict:
 
     # JSON fallback
     pool = _load_json_fallback(level)
-    if theme:
-        t        = theme.lower()
+    if db_theme:
+        t        = db_theme.lower()
         filtered = [p for p in pool if t in [x.lower() for x in p.get("themes", [])]]
         if len(filtered) >= 5:
             return random.choice(filtered)
