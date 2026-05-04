@@ -500,7 +500,7 @@ async def botlockstatus(ctx):
 
 
 @bot.command()
-@commands.cooldown(1, 3, commands.BucketType.user)
+@commands.cooldown(1, 5, commands.BucketType.user)
 async def puzzle(ctx, arg1: str = "medium", arg2: str = None):
     """
     Usage:
@@ -584,7 +584,7 @@ async def puzzle(ctx, arg1: str = "medium", arg2: str = None):
 
 
 @bot.command()
-@commands.cooldown(1, 3, commands.BucketType.user)
+@commands.cooldown(1, 5, commands.BucketType.user)
 async def hint(ctx):
     """!hint  —  same as the hint button."""
     await record_interaction()
