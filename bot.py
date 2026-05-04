@@ -438,6 +438,7 @@ async def on_message(message: discord.Message):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def ping(ctx):
     await ctx.send("\U0001f3d3 Pong! `" + str(round(bot.latency * 1000)) + "ms`")
 
@@ -485,6 +486,7 @@ async def unlockbotchannel(ctx):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def botlockstatus(ctx):
     """Show which channel Oslo is locked to (if any)."""
     if not ctx.guild:
@@ -498,6 +500,7 @@ async def botlockstatus(ctx):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def puzzle(ctx, arg1: str = "medium", arg2: str = None):
     """
     Usage:
@@ -581,6 +584,7 @@ async def puzzle(ctx, arg1: str = "medium", arg2: str = None):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def hint(ctx):
     """!hint  —  same as the hint button."""
     await record_interaction()
@@ -603,6 +607,7 @@ async def hint(ctx):
 
 
 @bot.command(name="move")
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def move_cmd(ctx, *, notation: str):
     """!move Nf3  —  alternative to typing  -Nf3"""
     await record_interaction()
@@ -637,6 +642,7 @@ async def move_cmd(ctx, *, notation: str):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def resign(ctx):
     """!resign  —  give up and see the full solution."""
     await record_interaction()
@@ -660,6 +666,7 @@ async def resign(ctx):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def solution(ctx):
     """!solution  —  reveals full answer, ends puzzle with 0 pts."""
     await record_interaction()
@@ -702,6 +709,7 @@ async def solution(ctx):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def profile(ctx):
     await record_interaction()
     stats = await get_user_stats(str(ctx.author.id))
@@ -724,6 +732,7 @@ async def profile(ctx):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def leaderboard(ctx):
     """!leaderboard — server top 10 with toggle buttons for score vs puzzles."""
     await record_interaction()
@@ -734,6 +743,7 @@ async def leaderboard(ctx):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def globalboard(ctx):
     """!globalboard — global top 10 by score across all servers."""
     await record_interaction()
@@ -846,6 +856,7 @@ class LeaderboardView(discord.ui.View):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def botstats(ctx):
     await record_interaction()
     stats = await get_bot_stats()
@@ -870,6 +881,7 @@ async def botstats(ctx):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def guide(ctx):
     await record_interaction()
     if not await is_allowed_channel(ctx):
@@ -921,6 +933,7 @@ async def guide(ctx):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def notation(ctx):
     await record_interaction()
     if not await is_allowed_channel(ctx):
@@ -955,6 +968,7 @@ async def notation(ctx):
 
 
 @bot.command()
+@commands.cooldown(1, 3, commands.BucketType.user)
 async def creator(ctx):
     await ctx.send(
         "\U0001f338 I am **Oslo**, your cozy Discord chess trainer.\n"
