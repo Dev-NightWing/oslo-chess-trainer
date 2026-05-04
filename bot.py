@@ -57,6 +57,28 @@ def admin_only():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# ERROR HANDLER  — cooldowns and missing args no longer silently swallowed
+# ─────────────────────────────────────────────────────────────────────────────
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandInvokeError):
+        error = error.original
+    if isinstance(error, commands.CommandOnCooldown):
+        retry = round(error.retry_after, 1)
+        await ctx.send(f"⏳ Slow down! Try `!{ctx.command}` again in **{retry}s**.")
+    elif isinstance(error, commands.CheckFailure):
+        pass  # admin_only() — intentionally silent
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("❌ Missing argument. Use `!guide` to see command usage.")
+    elif isinstance(error, commands.CommandNotFound):
+        pass
+    else:
+        print(f"[Oslo] Unhandled error in !{ctx.command}: {error}")
+        raise error
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # BOARD RENDERING
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -391,6 +413,13 @@ async def on_message(message: discord.Message):
     if bot_sleeping and not is_admin(user_id):
         admin_cmds = ['!wake', '!sleep', '!adminstatus']
         if not any(message.content.strip().lower().startswith(c) for c in admin_cmds):
+            if message.content.startswith("!") or (
+                user_id in active_puzzles and message.content.startswith("-")
+            ):
+                await message.reply(
+                    "💤 Oslo is offline for maintenance. Check back soon!",
+                    mention_author=False
+                )
             return
 
     # Move input: starts with "-", user has active puzzle
@@ -452,7 +481,10 @@ async def is_allowed_channel(ctx) -> bool:
     locked = await get_locked_channel(str(ctx.guild.id))
     if locked is None:
         return True  # No lock set — all channels allowed
-    return str(ctx.channel.id) == locked
+    if str(ctx.channel.id) == locked:
+        return True
+    await ctx.send(f"❌ Oslo puzzle commands only work in <#{locked}>.")
+    return False
 
 
 @bot.command()
